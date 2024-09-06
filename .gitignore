@@ -5,6 +5,9 @@
 /cmake_install.cmake
 /Makefile
 
+# on the mac we dont have a .exe extension so we ignore the executable
+TestProject
+
 # Ignore generated executables and libraries
 *.exe
 *.out
