@@ -1,11 +1,13 @@
 #include <iostream>
 
-
+//Type always goesq first in a union, for alignment
 struct Color {
+    int type;
     float r, g, b;
 };
 
 struct Pos {
+    int type;
     float x, y, z;
 };
 
