@@ -1,64 +1,206 @@
-//include libraries
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
 #include <iostream>
-GLuint VBO, VAO, shaderProgram;
+#include <vector>
 
-const std::vector<GLfloat> vertices = {
-    -0.5f, -0.5f, 0.0f, // 左下角
-    0.5f, -0.5f, 0.0f, // 右上角
-    0.0f, 0.5f, 0.0f, // 右下角
-};
 
-void prepareTriangle(){
+int gScreenWidth = 640;
+int gScreenHeight = 480;
+SDL_Window* gGraphicsApplicationWindow = nullptr;
+SDL_GLContext gOpenGLContext = nullptr;
+bool gQuit = false;
+
+
+//VAO
+GLuint gVertexArrayObject = 0;
+//VBO
+GLuint gVertexBufferObject = 0;
+
+
+//Program Object for the shaders
+GLuint gGraphicsPipelineShaderProgram = 0;
+
+
+//vertex shader
+const std::string gVertexShaderSource =
+    "#version 410 core\n"
+    "in vec4 position;\n"
+    "void main()\n"
+    "{\n"
+    "   gl_Position = vec4(position.x, position.y, position.z, position.w);\n"
+    "}\n";
+
+
+//fragment shader
+const std::string gFragmentShaderSource =
+    "#version 410 core\n"
+    "out vec4 color;\n"
+    "void main()\n"
+    "{\n"
+    "   color = vec4(1.0f, 0.5f, 0.0f, 1.0f);\n"
+    "}\n";
+
+GLuint CompileShader(GLuint type, const std::string& source){
+    GLuint shaderObject;
+    if(type == GL_VERTEX_SHADER){
+        shaderObject = glCreateShader(GL_VERTEX_SHADER);
+    }else if(type == GL_FRAGMENT_SHADER){
+        shaderObject = glCreateShader(GL_FRAGMENT_SHADER);
+    }
+
+
+    const char* src = source.c_str();
+    glShaderSource(shaderObject, 1, &src, nullptr);
+    glCompileShader(shaderObject);
+
+
+    return shaderObject;
+
 
 }
-void prepareVAOForGLTriangle()
-{
-    //1. 准备顶点数据
-    float vertices[] = {
-        -0.5f, -0.5f, 0.0f, // 左下角
-        0.5f, -0.5f, 0.0f, // 右上角
-        0.0f, 0.5f, 0.0f, // 右下角
+
+GLuint CreateShaderProgram(const std::string& vertexshadersource,
+                        const std::string& fragmentshadersource){
+    GLuint programObject = glCreateProgram();
+    GLuint myVertexShader = CompileShader(GL_VERTEX_SHADER, vertexshadersource);
+    GLuint myFragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentshadersource);
+    glAttachShader(programObject, myVertexShader);
+    glAttachShader(programObject, myFragmentShader);
+    glLinkProgram(programObject);
+
+
+    //validation
+    glValidateProgram(programObject);
+    return programObject;
+}
+
+
+void CreateGraphicsPipeline(){
+    gGraphicsPipelineShaderProgram = CreateShaderProgram(
+                                    gVertexShaderSource,
+                                    gFragmentShaderSource);
+}
+
+
+void GetOpenGLVersionInfo(){
+    std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
+    std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
+    std::cout << "Version: " << glGetString(GL_VERSION) << std::endl;
+    std::cout << "Shading Language: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+}
+
+
+void VertexSpecification(){
+    const std::vector<GLfloat> vertexPosition{
+        -0.8f, -0.8f, 0.0f,
+        0.8f, -0.8f, 0.0f,
+        0.0f, 0.8f, 0.0f
     };
+   
+   
+    glGenVertexArrays(1,&gVertexArrayObject);
+    glBindVertexArray(gVertexArrayObject);
 
-    //2. 创建一个 VBO
-    VBO = 0;
-    glGenBuffers(1, &VBO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    //3. 创建一个 VAO并绑定
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
-
-    //4. 描述位置属性
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    //generating the VBO
+    glGenBuffers(1, &gVertexBufferObject);
+    glBindBuffer(GL_ARRAY_BUFFER, gVertexBufferObject);
+    glBufferData(GL_ARRAY_BUFFER,
+                vertexPosition.size() * sizeof(GLfloat),
+                vertexPosition.data(),
+                GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-
-    //5. 解绑 VAO
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
     glBindVertexArray(0);
+    glDisableVertexAttribArray(0);
+
 
 }
 
-void render()
-{
-    glClear(GL_COLOR_BUFFER_BIT); //清理颜色缓冲区 GL_CALL是调试宏  
 
-    //1. 绑定当前 program
-    glUseProgram(shaderProgram);
+void InitializeProgram(){
+    if(SDL_Init(SDL_INIT_VIDEO) < 0){
+        std::cout<<" SDL2 could not initialize video subsystem" << std::endl;
+        exit(1);
+    }
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    gGraphicsApplicationWindow = SDL_CreateWindow("OpenGL Window",
+                                    100,100,
+                                    gScreenWidth, gScreenHeight,
+                                    SDL_WINDOW_OPENGL);
+    if(gGraphicsApplicationWindow == nullptr){
+        std::cout << "SDL Window was not able to be created" << std::endl;
+    }
+    gOpenGLContext = SDL_GL_CreateContext(gGraphicsApplicationWindow);
+    if(gOpenGLContext == nullptr){
+        std::cout << "OpenGL context not available" << std::endl;
+        exit(1);
+    }
 
-    //2. 绑定 VAO
-    glBindVertexArray(VAO);
 
-    //3. 绘制图形
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    if(!gladLoadGLLoader(SDL_GL_GetProcAddress)){
+        std::cout << "Glad was not initialized" << std::endl;
+        exit(1);
+    }
+    GetOpenGLVersionInfo();
+}
 
-    //GL_CALL(glDrawArrays(GL_TRIANGLES, 2, 3));
+
+void Input(){
+    SDL_Event e;
+    while(SDL_PollEvent(&e) != 0){
+        if(e.type == SDL_QUIT){
+            std::cout << "Goodbye" << std::endl;
+            gQuit = true;
+        }
+    }
+}
+
+
+void PreDraw(){
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glViewport(0,0,gScreenWidth, gScreenHeight);
+    glClearColor(1.f,1.f,0.f,1.f);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+    glUseProgram(gGraphicsPipelineShaderProgram);
+
 
 }
+
+
+void Draw(){
+    glBindVertexArray(gVertexArrayObject);
+    glBindBuffer(GL_ARRAY_BUFFER, gVertexBufferObject);
+    glDrawArrays(GL_TRIANGLES,0,3);
+}
+
+
+void MainLoop(){
+    while(!gQuit){
+        Input();
+
+
+        PreDraw();
+
+
+        Draw();
+
+
+        SDL_GL_SwapWindow(gGraphicsApplicationWindow);
+    }
+}
+
+
+void CleanUp(){
+    SDL_DestroyWindow(gGraphicsApplicationWindow);
+    SDL_Quit();
+}
+
 #ifdef _WIN32
 int WinMain(int argc, char *argv[])
 {
@@ -66,76 +208,15 @@ int WinMain(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 #endif
-    // Initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
-    {
-        std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
-        return -1;
-    }
 
-    // Create an SDL window
-    SDL_Window *window = SDL_CreateWindow("SDL2 and GLAD Example",
-                                          SDL_WINDOWPOS_CENTERED,
-                                          SDL_WINDOWPOS_CENTERED,
-                                          800, 600,
-                                          SDL_WINDOW_OPENGL);
-    if (!window)
-    {
-        std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
-        SDL_Quit();
-        return -1;
-    }
+    InitializeProgram();
 
-    // Create an OpenGL context
-    SDL_GLContext glContext = SDL_GL_CreateContext(window);
-    if (!glContext)
-    {
-        std::cerr << "Failed to create OpenGL context: " << SDL_GetError() << std::endl;
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
+    VertexSpecification();
 
-    // Initialize GLAD
-    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
-    {
-        std::cerr << "Failed to initialize GLAD" << std::endl;
-        SDL_GL_DeleteContext(glContext);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
+    CreateGraphicsPipeline();
 
-    // Set the clear color to red (RGBA: 1.0, 0.0, 0.0, 1.0)
-    glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
-
-    //prepareVAOForGLTriangle();
-
-    // Main loop
-    bool running = true;
-    while (running)
-    {
-        SDL_Event event;
-        while (SDL_PollEvent(&event))
-        {
-            if (event.type == SDL_QUIT)
-            {
-                running = false;
-            }
-        }
-
-        // Clear screen with the red color
-        glClear(GL_COLOR_BUFFER_BIT);
-        //render();
-
-        // Swap buffers
-        SDL_GL_SwapWindow(window);
-    }
-
-    // Cleanup
-    SDL_GL_DeleteContext(glContext);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+    MainLoop();
+    CleanUp();
 
     return 0;
 }
