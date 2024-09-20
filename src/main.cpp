@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     }
 
     // Set the clear color to red (RGBA: 1.0, 0.0, 0.0, 1.0)
-    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
 
     // Main loop
     bool running = true;
