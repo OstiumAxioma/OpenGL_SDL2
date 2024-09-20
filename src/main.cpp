@@ -2,7 +2,63 @@
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
 #include <iostream>
+GLuint VBO, VAO, shaderProgram;
 
+const std::vector<GLfloat> vertices = {
+    -0.5f, -0.5f, 0.0f, // 左下角
+    0.5f, -0.5f, 0.0f, // 右上角
+    0.0f, 0.5f, 0.0f, // 右下角
+};
+
+void prepareTriangle(){
+
+}
+void prepareVAOForGLTriangle()
+{
+    //1. 准备顶点数据
+    float vertices[] = {
+        -0.5f, -0.5f, 0.0f, // 左下角
+        0.5f, -0.5f, 0.0f, // 右上角
+        0.0f, 0.5f, 0.0f, // 右下角
+    };
+
+    //2. 创建一个 VBO
+    VBO = 0;
+    glGenBuffers(1, &VBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    //3. 创建一个 VAO并绑定
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
+
+    //4. 描述位置属性
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    //5. 解绑 VAO
+    glBindVertexArray(0);
+
+}
+
+void render()
+{
+    glClear(GL_COLOR_BUFFER_BIT); //清理颜色缓冲区 GL_CALL是调试宏  
+
+    //1. 绑定当前 program
+    glUseProgram(shaderProgram);
+
+    //2. 绑定 VAO
+    glBindVertexArray(VAO);
+
+    //3. 绘制图形
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    //GL_CALL(glDrawArrays(GL_TRIANGLES, 2, 3));
+
+}
 #ifdef _WIN32
 int WinMain(int argc, char *argv[])
 {
@@ -53,6 +109,8 @@ int main(int argc, char *argv[])
     // Set the clear color to red (RGBA: 1.0, 0.0, 0.0, 1.0)
     glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
 
+    //prepareVAOForGLTriangle();
+
     // Main loop
     bool running = true;
     while (running)
@@ -68,6 +126,7 @@ int main(int argc, char *argv[])
 
         // Clear screen with the red color
         glClear(GL_COLOR_BUFFER_BIT);
+        //render();
 
         // Swap buffers
         SDL_GL_SwapWindow(window);
