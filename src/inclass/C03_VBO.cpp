@@ -1,9 +1,6 @@
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
 #include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
 #include <vector>
 
 
@@ -19,23 +16,29 @@ GLuint gVertexArrayObject = 0;
 //VBO
 GLuint gVertexBufferObject = 0;
 
-int shapeToDraw = 1;
 
 //Program Object for the shaders
 GLuint gGraphicsPipelineShaderProgram = 0;
 
 
-//Read the fragment shader
-std::string readShaderFile(const std::string& filePath) {
-    std::ifstream shaderFile(filePath);
-    if (!shaderFile.is_open()) {
-        std::cerr << "Failed to open shader file: " << filePath << std::endl;
-        return "";
-    }
-    std::stringstream shaderStream;
-    shaderStream << shaderFile.rdbuf();
-    return shaderStream.str();
-}
+//vertex shader
+const std::string gVertexShaderSource =
+    "#version 410 core\n"
+    "in vec4 position;\n"
+    "void main()\n"
+    "{\n"
+    "   gl_Position = vec4(position.x, position.y, position.z, position.w);\n"
+    "}\n";
+
+
+//fragment shader
+const std::string gFragmentShaderSource =
+    "#version 410 core\n"
+    "out vec4 color;\n"
+    "void main()\n"
+    "{\n"
+    "   color = vec4(1.0f, 0.5f, 0.0f, 1.0f);\n"
+    "}\n";
 
 GLuint CompileShader(GLuint type, const std::string& source){
     GLuint shaderObject;
@@ -73,8 +76,6 @@ GLuint CreateShaderProgram(const std::string& vertexshadersource,
 
 
 void CreateGraphicsPipeline(){
-    std::string gVertexShaderSource = readShaderFile("src/shader_vertex.glsl");
-    std::string gFragmentShaderSource = readShaderFile("src/shader_frag.glsl");
     gGraphicsPipelineShaderProgram = CreateShaderProgram(
                                     gVertexShaderSource,
                                     gFragmentShaderSource);
@@ -88,50 +89,34 @@ void GetOpenGLVersionInfo(){
     std::cout << "Shading Language: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
 }
 
-void VertexSpecification(){
-    std::vector<GLfloat> vertexData;
-    if (shapeToDraw == 1) {
-        vertexData = {
-            // 位置               // 颜色
-            -0.8f, -0.8f, 0.0f,   1.0f, 0.0f, 0.0f,  // 顶点1：红色
-             0.8f, -0.8f, 0.0f,   0.0f, 1.0f, 0.0f,  // 顶点2：绿色
-            -0.8f,  0.8f, 0.0f,   0.0f, 0.0f, 1.0f,  // 顶点3：蓝色
-             0.8f, -0.8f, 0.0f,   0.0f, 1.0f, 0.0f,  // 顶点2：绿色（重复）
-             0.8f,  0.8f, 0.0f,   1.0f, 1.0f, 0.0f,  // 顶点4：黄色
-            -0.8f,  0.8f, 0.0f,   0.0f, 0.0f, 1.0f   // 顶点3：蓝色（重复）
-        };
-    } else if (shapeToDraw == 2) {
-        vertexData = {
-            // 位置               // 颜色
-            -0.8f, -0.8f, 0.0f,   1.0f, 0.0f, 0.0f,  // 顶点1：红色
-             0.8f, -0.8f, 0.0f,   0.0f, 1.0f, 0.0f,  // 顶点2：绿色
-             0.0f,  0.0f, 0.0f,   0.0f, 0.0f, 1.0f   // 顶点3：蓝色
-        };
-    }
 
-    glGenVertexArrays(1, &gVertexArrayObject);
+void VertexSpecification(){
+    const std::vector<GLfloat> vertexPosition{
+        -0.8f, -0.8f, 0.0f,
+        0.8f, -0.8f, 0.0f,
+        0.0f, 0.8f, 0.0f
+    };
+   
+   
+    glGenVertexArrays(1,&gVertexArrayObject);
     glBindVertexArray(gVertexArrayObject);
 
-    // 生成 VBO
+
+    //generating the VBO
     glGenBuffers(1, &gVertexBufferObject);
     glBindBuffer(GL_ARRAY_BUFFER, gVertexBufferObject);
     glBufferData(GL_ARRAY_BUFFER,
-                 vertexData.size() * sizeof(GLfloat),
-                 vertexData.data(),
-                 GL_STATIC_DRAW);
-
-    // 设置位置属性
+                vertexPosition.size() * sizeof(GLfloat),
+                vertexPosition.data(),
+                GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
-
-    // 设置颜色属性
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
-
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
     glBindVertexArray(0);
     glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+
+
 }
+
 
 void InitializeProgram(){
     if(SDL_Init(SDL_INIT_VIDEO) < 0){
@@ -172,20 +157,6 @@ void Input(){
             std::cout << "Goodbye" << std::endl;
             gQuit = true;
         }
-        switch (e.key.keysym.sym) {
-            case SDLK_1:
-                shapeToDraw = 1;
-                std::cout << "1 key pressed" << std::endl;
-                std::cout << "Drawing Square" << std::endl;
-                break;
-            case SDLK_2:
-                shapeToDraw = 2;
-                std::cout << "2 key pressed" << std::endl;
-                std::cout << "Drawing Triangle" << std::endl;
-                break;
-            default:
-                break;
-        }
     }
 }
 
@@ -205,11 +176,7 @@ void PreDraw(){
 void Draw(){
     glBindVertexArray(gVertexArrayObject);
     glBindBuffer(GL_ARRAY_BUFFER, gVertexBufferObject);
-    if (shapeToDraw == 1) {
-        glDrawArrays(GL_TRIANGLES,0,6);
-    } else if (shapeToDraw == 2) {
-        glDrawArrays(GL_TRIANGLES,0,3);
-    }
+    glDrawArrays(GL_TRIANGLES,0,3);
 }
 
 
@@ -241,6 +208,7 @@ int WinMain(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 #endif
+
     InitializeProgram();
 
     VertexSpecification();
