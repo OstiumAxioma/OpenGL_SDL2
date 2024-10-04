@@ -16,6 +16,7 @@ add_executable(TestProject ${SOURCES})
 # Add project include directory for both platforms
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
+
 # Define SDL2 version variable
 # This variable specifies the version of SDL2 installed via Homebrew.
 # Students can change this value if they have a different version of SDL2 installed.
