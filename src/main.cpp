@@ -46,8 +46,15 @@ GLuint gVertexArrayObject					= 0;
 // VBOs are our mechanism for arranging geometry on the GPU.
 GLuint 	gVertexBufferObject					= 0;
 
-float x_offset = 0.0f;
-float y_offset = 0.0f;
+
+// Declare a scale matrix
+glm::mat4 scaleMatrix = glm::mat4(1.0f);
+
+// Declare a offset matrix
+glm::mat4 offsetMatrix = glm::mat4(1.0f);
+
+// Declare a rotation matrix
+glm::mat4 rotationMatrix = glm::mat4(1.0f);
 
 // Shaders
 // Here we setup two shaders, a vertex shader and a fragment shader.
@@ -375,8 +382,19 @@ void PreDraw(){
 * @return void
 */
 void Draw(){
-	// Set the uniform value for the offset
-	glUniform2f(glGetUniformLocation(gGraphicsPipelineShaderProgram, "offset"), x_offset, y_offset);
+
+	GLuint scaleLocation = glGetUniformLocation(gGraphicsPipelineShaderProgram, "scaleMatrix");
+
+	glUniformMatrix4fv(scaleLocation, 1, GL_FALSE, glm::value_ptr(scaleMatrix));
+
+	GLuint offsetLocation = glGetUniformLocation(gGraphicsPipelineShaderProgram, "offsetMatrix");
+
+	glUniformMatrix4fv(offsetLocation, 1, GL_FALSE, glm::value_ptr(offsetMatrix));
+
+	GLuint rotationLocation = glGetUniformLocation(gGraphicsPipelineShaderProgram, "rotationMatrix");
+
+	glUniformMatrix4fv(rotationLocation, 1, GL_FALSE, glm::value_ptr(rotationMatrix));
+
     // Enable our attributes
 	glBindVertexArray(gVertexArrayObject);
 
@@ -389,6 +407,7 @@ void Draw(){
 	// Stop using our current graphics pipeline
 	// Note: This is not necessary if we only have one graphics pipeline.
     glUseProgram(0);
+
 }
 
 
@@ -431,19 +450,43 @@ void Input(){
 					break;
 				case SDLK_LEFT:
 					std::cout << "LEFT" << std::endl;
-					x_offset -= move_speed;
+					offsetMatrix = glm::translate(offsetMatrix, glm::vec3(-move_speed, 0.0f, 0.0f));
 					break;
 				case SDLK_RIGHT:
 					std::cout << "RIGHT" << std::endl;
-					x_offset += move_speed;
+					offsetMatrix = glm::translate(offsetMatrix, glm::vec3(move_speed, 0.0f, 0.0f));
 					break;
 				case SDLK_UP:
 					std::cout << "UP" << std::endl;
-					y_offset += move_speed;
+					offsetMatrix = glm::translate(offsetMatrix, glm::vec3(0.0f, move_speed, 0.0f));
 					break;
 				case SDLK_DOWN:
 					std::cout << "DOWN" << std::endl;
-					y_offset -= move_speed;
+					offsetMatrix = glm::translate(offsetMatrix, glm::vec3(0.0f, -move_speed, 0.0f));
+					break;
+				case SDLK_q:
+					std::cout << "Scale Up" << std::endl;
+					scaleMatrix = glm::scale(scaleMatrix, glm::vec3(1.1f, 1.1f, 1.1f));
+					break;
+				case SDLK_e:
+					std::cout << "Scale Down" << std::endl;
+					scaleMatrix = glm::scale(scaleMatrix, glm::vec3(0.9f, 0.9f, 0.9f));
+					break;
+				case SDLK_a:
+					std::cout << "Rotate Left" << std::endl;
+					rotationMatrix = glm::rotate(rotationMatrix, glm::radians(10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+					break;
+				case SDLK_d:
+					std::cout << "Rotate Right" << std::endl;
+					rotationMatrix = glm::rotate(rotationMatrix, glm::radians(-10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+					break;
+				case SDLK_w:
+					std::cout << "Rotate Up" << std::endl;
+					rotationMatrix = glm::rotate(rotationMatrix, glm::radians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+					break;
+				case SDLK_s:
+					std::cout << "Rotate Down" << std::endl;
+					rotationMatrix = glm::rotate(rotationMatrix, glm::radians(-10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 					break;
 				default:
 					break;
