@@ -4,15 +4,11 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <vector>
 
 // 包含 GLM 库头文件
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-// 包含自定义的 OBJ 加载器头文件
-#include "loadOBJ.h"  // 请确保此头文件包含了 Vertex 和 Face 类的声明，以及读取 OBJ 文件的函数
 
 // 全局变量
 GLuint gGraphicsPipelineShaderProgram;
@@ -37,7 +33,7 @@ int main(int argc, char* argv[])
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     // 创建窗口
-    SDL_Window* window = SDL_CreateWindow("OBJ Loader with SDL", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
+    SDL_Window* window = SDL_CreateWindow("Rotating Cube with SDL", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
     if (window == NULL)
     {
         std::cout << "创建 SDL 窗口失败: " << SDL_GetError() << std::endl;
@@ -68,35 +64,40 @@ int main(int argc, char* argv[])
     // 创建图形管线
     CreateGraphicsPipeline();
 
-    // 使用 loadOBJ.cpp 中的函数读取 OBJ 文件
-    std::vector<Vertex> vertices;
-    std::vector<Face> faces;
+    // 设置顶点数据
+    float vertices[] = {
+        // 立方体的顶点坐标（仅8个唯一顶点）
+        -0.5f, -0.5f, -0.5f, // 0 左下后
+         0.5f, -0.5f, -0.5f, // 1 右下后
+         0.5f,  0.5f, -0.5f, // 2 右上后
+        -0.5f,  0.5f, -0.5f, // 3 左上后
+        -0.5f, -0.5f,  0.5f, // 4 左下前
+         0.5f, -0.5f,  0.5f, // 5 右下前
+         0.5f,  0.5f,  0.5f, // 6 右上前
+        -0.5f,  0.5f,  0.5f  // 7 左上前
+    };
 
-    if (!LoadOBJ("src/cube.obj", vertices, faces))  // 请确保 LoadOBJ 函数可以正确读取文件并填充 vertices 和 faces
-    {
-        std::cout << "加载 OBJ 文件失败，程序将退出。" << std::endl;
-        return -1;
-    }
-
-    // 将顶点数据转换为浮点数组
-    std::vector<float> vertexData;
-    for (const auto& vertex : vertices)
-    {
-        vertexData.push_back(vertex.x);
-        vertexData.push_back(vertex.y);
-        vertexData.push_back(vertex.z);
-    }
-
-    // 将面数据转换为索引数组
-    std::vector<unsigned int> indices;
-    for (const auto& face : faces)
-    {
-        // 注意：OBJ 文件中的索引从 1 开始，而 OpenGL 需要从 0 开始的索引
-        for (int idx : face.vertexIndices)
-        {
-            indices.push_back(idx - 1);
-        }
-    }
+    // 索引数组
+    unsigned int indices[] = {
+        // 后面
+        0, 1, 2,
+        2, 3, 0,
+        // 前面
+        4, 5, 6,
+        6, 7, 4,
+        // 左面
+        0, 3, 7,
+        7, 4, 0,
+        // 右面
+        1, 5, 6,
+        6, 2, 1,
+        // 底面
+        0, 1, 5,
+        5, 4, 0,
+        // 顶面
+        3, 2, 6,
+        6, 7, 3
+    };
 
     // 创建 VAO、VBO 和 EBO
     unsigned int VBO, VAO, EBO;
@@ -109,11 +110,11 @@ int main(int argc, char* argv[])
 
     // 绑定 VBO 并传输顶点数据
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     // 绑定 EBO 并传输索引数据
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // 设置顶点属性指针
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
@@ -152,7 +153,7 @@ int main(int argc, char* argv[])
         float timeValue = SDL_GetTicks() / 1000.0f; // SDL_GetTicks 返回毫秒，需要转换为秒
         model = glm::rotate(model, timeValue * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
 
-        glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -5.0f));
+        glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
 
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(45.0f), 
@@ -167,9 +168,9 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        // 绘制模型
+        // 绘制立方体
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
         // 交换缓冲区
         SDL_GL_SwapWindow(window);
