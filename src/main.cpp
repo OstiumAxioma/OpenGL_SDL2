@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
     std::vector<Vertex> vertices;
     std::vector<Face> faces;
 
-    if (!LoadOBJ("src/cube.obj", vertices, faces))  // 请确保 LoadOBJ 函数可以正确读取文件并填充 vertices 和 faces
+    if (!LoadOBJ("../src/ball.obj", vertices, faces))  // 请确保 LoadOBJ 函数可以正确读取文件并填充 vertices 和 faces
     {
         std::cout << "加载 OBJ 文件失败，程序将退出。" << std::endl;
         return -1;

@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(SOURCES
     src/main.cpp
     src/glad.c
+    src/loadOBJ.cpp
 )
 
 # Create executable

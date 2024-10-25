@@ -5,6 +5,7 @@
 
 bool LoadOBJ(const std::string& filename, std::vector<Vertex>& vertices, std::vector<Face>& faces)
 {
+    std::ofstream abc("objtest.obj");
     // 打开 OBJ 文件
     std::ifstream objFile(filename);
     if (!objFile.is_open()) {
